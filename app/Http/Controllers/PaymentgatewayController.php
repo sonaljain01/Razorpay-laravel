@@ -63,30 +63,27 @@ class PaymentgatewayController extends Controller
         }
 
         if ($success === true) {
-            // Update database with success data
-            // Redirect to success page
+
             return redirect('/');
         } else {
-            // Update database with error data
-            // Redirect to payment page with error
-            // Pass $error along with route
+
             return redirect('/');
         }
     }
 
     public function cancelOrder(Request $request)
     {
-        // Cancel the order logic
+
         $orderId = $request->input('order_id');
 
-        // Update status to canceled in DB
+
 
         return response()->json(['status' => 'order_canceled']);
     }
 
     public function handleWebhook(Request $request)
     {
-        // Validate Razorpay signature here
+
         $payload = $request->getContent();
         $webhookSecret = env('RAZORPAY_WEBHOOK_SECRET');
         $actualSignature = $request->header('X-Razorpay-Signature');
@@ -108,30 +105,21 @@ class PaymentgatewayController extends Controller
             // Payment was captured successfully
             $payment = $data['payload']['payment']['entity'] ?? null;
 
-            // Payment success logic here
-            // Example: Save to database or update order status
             $orderId = $payment['order_id'] ?? null;
             $amount = $payment['amount'] ?? null;
 
-            // Your logic to handle successful payment here
-            // Example:
-            // $this->markOrderAsPaid($orderId, $amount);
 
         } elseif ($event === 'payment.failed') {
-            // Payment failed
+
             $payment = $data['payload']['payment']['entity'] ?? null;
 
-            // Payment failure logic here
+
             $orderId = $payment['order_id'] ?? null;
 
-            // Your logic to handle failed payment here
-            // Example:
-            // $this->markOrderAsFailed($orderId);
         } else {
             return response()->json(['error' => 'Unhandled event type'], 400);
         }
 
-        // Respond with a 200 OK when the webhook was handled successfully
         return response()->json(['status' => 'success'], 200);
     }
 
