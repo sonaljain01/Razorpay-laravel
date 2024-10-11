@@ -15,3 +15,9 @@ use App\Http\Controllers\PaymentgatewayController;
 // })->where('any', '.*');
 
 // Route::post('webhook/razorpay', [PaymentgatewayController::class, 'handleWebhook']);
+
+
+Route::get('/razorpay-payment', function () {
+    return view('razorpaypayment');
+});
+
