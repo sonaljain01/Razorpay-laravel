@@ -30,8 +30,8 @@ class PaymentgatewayController extends Controller
         $order = Order::create([
             'name' => $request->name,
             'email' => $request->email,
-            'amount' => $request->amount,  // Save in rupees for easy reference
-            'order_id' => $razorpayOrder['id'],  // Store Razorpay order ID
+            'amount' => $request->amount,  // Amount in rupees
+            'order_id' => $razorpayOrder['id'], 
             'status' => 'pending',
         ]);
 
@@ -41,35 +41,30 @@ class PaymentgatewayController extends Controller
             'email' => $request->email,
             'amount' => $request->amount,
             'status' => 'pending',
+            // 'payment_id' => $razorpayOrder['id'],
         ]);
     }
 
+    private $api;
+
+    public function __construct()
+    {
+        $this->api = new Api(config('values.razorpayKey'), config('values.razorpaySecret'));
+    }
     public function verify(Request $request)
     {
-        $success = true;
-        $error = "Payment Failed!";
-
-        if (empty($request->razorpay_payment_id) === false) {
-            $api = new Api(Config("values.razorpayKey"), Config("values.razorpaySecret"));
-            try {
-                $attributes = [
-                    'razorpay_order_id' => $request->razorpay_order_id,
-                    'razorpay_payment_id' => $request->razorpay_payment_id,
-                    'razorpay_signature' => $request->razorpay_signature
-                ];
-                $api->utility->verifyPaymentSignature($attributes);
-            } catch (SignatureVerificationError $e) {
-                $success = false;
-                $error = 'Razorpay Error : ' . $e->getMessage();
-            }
+        if (empty($request->razorpay_payment_id)) {
+            return redirect('/')->with('error', 'Payment Failed!');
         }
 
-        if ($success === true) {
+        try {
+            $attributes = $request->only('razorpay_order_id', 'razorpay_payment_id', 'razorpay_signature');
+            $this->api->utility->verifyPaymentSignature($attributes);
 
-            return redirect('/');
-        } else {
-
-            return redirect('/');
+            return redirect('/')->with('success', 'Payment successful!');
+        } catch (SignatureVerificationError $e) {
+            Log::error('Razorpay Signature Verification Failed: ' . $e->getMessage());
+            return redirect('/')->with('error', 'Razorpay Error: ' . $e->getMessage());
         }
     }
 
@@ -135,7 +130,7 @@ class PaymentgatewayController extends Controller
     {
         $orderId = $payment['order_id'] ?? null;
         $amount = $payment['amount'] ?? null;
-        Log::error("Payment failed for Order {$orderId}.");
+        Log::error("Payment failed for Order {$orderId} with amount {$amount}.");
 
     }
 

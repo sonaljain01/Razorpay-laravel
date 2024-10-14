@@ -20,4 +20,6 @@ use App\Http\Controllers\PaymentgatewayController;
 Route::get('/razorpay-payment', function () {
     return view('razorpaypayment');
 });
-
+Route::post('/payment/create', [PaymentgatewayController::class, 'createOrder'])->name('payment.create');
+Route::post('/payment/verify', [PaymentgatewayController::class, 'verify'])->name('payment.verify');
+Route::post('/payment/cancel', [PaymentgatewayController::class, 'cancelOrder'])->name('payment.cancel');

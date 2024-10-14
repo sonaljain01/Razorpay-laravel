@@ -14,5 +14,6 @@ Route::group(['prefix' => 'user'], function () {
         Route::post('payment/create-order', [PaymentgatewayController::class, 'createOrder']);
         Route::post('payment/cancel', [PaymentgatewayController::class, 'cancelOrder']);
         Route::post('webhook/razorpay', [PaymentgatewayController::class, 'handleWebhook']);
+        Route::post('payment/verify', [PaymentgatewayController::class, 'verify']);
     });
 // });

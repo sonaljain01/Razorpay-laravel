@@ -1,74 +1,92 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Razorpay Payment</title>
+    <title>BindassPAY</title>
+
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
 <body>
-    <h1>Razorpay Payment</h1>
+    <div style="width: 100%; max-width: 400px; margin: 50px auto;">
+        <h2>BindassPAY</h2>
+        <form id="payment-form">
+            <div>
+                <label>Name:</label>
+                <input type="text" name="name" id="name" required>
+            </div>
+            <div>
+                <label>Email:</label>
+                <input type="email" name="email" id="email" required>
+            </div>
+            <div>
+                <label>Amount (INR):</label>
+                <input type="number" name="amount" id="amount" required min="1">
+            </div>
+            <button type="submit">Pay Now</button>
+        </form>
 
-    <form id="paymentForm" method="POST" action="{{ url('pay/verify') }}">
-        @csrf
-        <input type="hidden" name="razorpay_payment_id" id="razorpay_payment_id">
-        <input type="hidden" name="razorpay_order_id" id="razorpay_order_id">
-        <input type="hidden" name="razorpay_signature" id="razorpay_signature">
-
-        <button type="button" id="payBtn">Pay Now</button>
-    </form>
+        <div id="status-message" style="margin-top: 20px; color: green;"></div>
+    </div>
 
     <script>
-        document.getElementById('payBtn').onclick = function(e) {
+        document.getElementById('payment-form').addEventListener('submit', async function (e) {
             e.preventDefault();
 
-            // This AJAX request will send the order details and get the Razorpay order ID
-            fetch("{{ url('api/user/payment/create-order') }}", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({
-                    name: 'John Doe', // Get actual user details dynamically
-                    email: 'john@example.com',
-                    amount: 1000 // Amount in rupees
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                // Initialize Razorpay with the order ID and other data
-                var options = {
-                    "key": "{{ env('RAZORPAY_KEY') }}", // Your Razorpay Key
-                    "amount": data.amount * 100, // Amount in paise
-                    "currency": "INR",
-                    "name": data.name,
-                    "description": "Test Transaction",
-                    "order_id": data.order_id, // Order ID from Razorpay
-                    "handler": function (response){
-                        // Set the payment details in the form fields
-                        document.getElementById('razorpay_payment_id').value = response.razorpay_payment_id;
-                        document.getElementById('razorpay_order_id').value = response.razorpay_order_id;
-                        document.getElementById('razorpay_signature').value = response.razorpay_signature;
-                        
-                        // Submit the form to verify the payment
-                        document.getElementById('paymentForm').submit();
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const amount = document.getElementById('amount').value;
+
+            try {
+                // Create the Razorpay order
+                const response = await axios.post('{{ route('payment.create') }}', {
+                    name: name,
+                    email: email,
+                    amount: amount,
+                });
+
+                const { order_id, key, amount: razorpayAmount } = response.data;
+
+                // Launch Razorpay checkout
+                const options = {
+                    key: key,
+                    amount: razorpayAmount,
+                    currency: "INR",
+                    name: "Payment Demo",
+                    description: "Test Transaction",
+                    order_id: order_id,
+                    handler: async function (response) {
+                        const verifyResponse = await axios.post('{{ route('payment.verify') }}', {
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_signature: response.razorpay_signature
+                        });
+
+                        document.getElementById('status-message').innerText =
+                            "Payment Successful!";
                     },
-                    "prefill": {
-                        "name": data.name,
-                        "email": data.email
+                    prefill: {
+                        name: name,
+                        email: email
                     },
-                    "theme": {
-                        "color": "#F37254"
+                    theme: {
+                        color: "#3399cc"
                     }
                 };
 
-                var rzp1 = new Razorpay(options);
-                rzp1.open();
-            })
-            .catch(error => console.error('Error:', error));
-        };
+                const rzp = new Razorpay(options);
+                rzp.open();
+
+                rzp.on('payment.failed', function (response) {
+                    alert('Payment Failed: ' + response.error.description);
+                });
+            } catch (error) {
+                console.error('Error creating order:', error);
+                alert('Failed to create Razorpay order.');
+            }
+        });
     </script>
 </body>
 </html>
