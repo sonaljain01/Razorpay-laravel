@@ -5,40 +5,40 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Razorpay\Api\Api;
 use Razorpay\Api\Errors\SignatureVerificationError;
+use App\Services\RazorpayService;
+use App\Models\Order;
+use App\Http\Requests\CreateOrderRequest;
 class PaymentgatewayController extends Controller
 {
-    public function createOrder(Request $request)
+    public function createOrder(CreateOrderRequest $request)
     {
-        // Validate the request
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
-            'amount' => 'required|numeric|min:1',
-        ]);
+        // $validated = $request->validated();
 
         // Initialize Razorpay API
         $api = new Api(env('RAZORPAY_KEY'), env('RAZORPAY_SECRET'));
 
         // Create a Razorpay order
-        $order = $api->order->create([
+        $razorpayOrder = $api->order->create([
             'receipt' => 'order_rcptid_' . time(),
             'amount' => $request->amount * 100, // Amount in paise
             'currency' => 'INR',
         ]);
 
-        // Save order to DB if needed
+        // Save order to DB
+        $order = Order::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'amount' => $request->amount,  // Save in rupees for easy reference
+            'order_id' => $razorpayOrder['id'],  // Store Razorpay order ID
+            'status' => 'pending',
+        ]);
 
         return response()->json([
-            'order_id' => $order->id,
+            'order_id' => $razorpayOrder['id'],
             'name' => $request->name,
             'email' => $request->email,
             'amount' => $request->amount,
             'status' => 'pending',
-            // 'data' => [
-            //     "key" => Config("values.razorpayKey"),
-            //     "amount" => $request->amount * 100,
-            //     "order_id" => $order['id'],
-            // ]
         ]);
     }
 
