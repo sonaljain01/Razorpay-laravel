@@ -15,7 +15,7 @@ return new class extends Migration {
             $table->string('order_id');  // Razorpay order ID
             $table->string('name');
             $table->string('email');
-            $table->enum('status', ['pending', 'success', 'failed'])->default('pending');
+            $table->enum('status', ['pending', 'success', 'failed', 'canceled'])->default('pending');
             $table->timestamps();
         });
     }
