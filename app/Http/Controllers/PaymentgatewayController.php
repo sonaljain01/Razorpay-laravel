@@ -8,6 +8,8 @@ use Razorpay\Api\Errors\SignatureVerificationError;
 use App\Services\RazorpayService;
 use App\Models\Order;
 use App\Http\Requests\CreateOrderRequest;
+use App\Http\Requests\OrderCancelRequest;
+use Log;
 class PaymentgatewayController extends Controller
 {
     public function createOrder(CreateOrderRequest $request)
@@ -71,14 +73,20 @@ class PaymentgatewayController extends Controller
         }
     }
 
-    public function cancelOrder(Request $request)
+    public function cancelOrder(OrderCancelRequest $request)
     {
 
         $orderId = $request->input('order_id');
+        $order = Order::where('order_id', $orderId)->first();
+        if (!$order) {
+            return response()->json(['error' => 'Order not found'], 404);
+        } elseif ($order->status === 'pending') {
+            $order->update(['status' => 'canceled']);
 
+            return response()->json(['status' => 'order_canceled', 'message' => 'Order canceled successfully.']);
+        }
 
-
-        return response()->json(['status' => 'order_canceled']);
+        return response()->json(['error' => 'Order already canceled.'], 400);
     }
 
     public function handleWebhook(Request $request)
@@ -100,36 +108,44 @@ class PaymentgatewayController extends Controller
 
         $event = $data['event'] ?? null;
 
-        // Handle different events
-        if ($event === 'payment.captured') {
-            // Payment was captured successfully
-            $payment = $data['payload']['payment']['entity'] ?? null;
+        switch ($event) {
+            case 'payment.captured':
+                $this->handlePaymentCaptured($data['payload']['payment']['entity']);
+                break;
 
-            $orderId = $payment['order_id'] ?? null;
-            $amount = $payment['amount'] ?? null;
+            case 'payment.failed':
+                $this->handlePaymentFailed($data['payload']['payment']['entity']);
+                break;
 
-
-        } elseif ($event === 'payment.failed') {
-
-            $payment = $data['payload']['payment']['entity'] ?? null;
-
-
-            $orderId = $payment['order_id'] ?? null;
-
-        } else {
-            return response()->json(['error' => 'Unhandled event type'], 400);
+            default:
+                return response()->json(['error' => 'Unhandled event type'], 400);
         }
 
         return response()->json(['status' => 'success'], 200);
     }
 
+    private function handlePaymentCaptured($payment)
+    {
+        $orderId = $payment['order_id'] ?? null;
+        $amount = $payment['amount'] ?? null;
+        Log::info("Payment captured successfully for Order {$orderId} with amount {$amount}.");
+    }
+
+    private function handlePaymentFailed($payment)
+    {
+        $orderId = $payment['order_id'] ?? null;
+        $amount = $payment['amount'] ?? null;
+        Log::error("Payment failed for Order {$orderId}.");
+
+    }
+
     private function verifyWebhookSignature($payload, $actualSignature, $secret)
     {
-            $expectedSignature = hash_hmac('sha256', $payload, $secret);
+        $expectedSignature = hash_hmac('sha256', $payload, $secret);
 
-            return hash_equals($expectedSignature, $actualSignature);
+        return hash_equals($expectedSignature, $actualSignature);
 
-        
+
     }
 
 
