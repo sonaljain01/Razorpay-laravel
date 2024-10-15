@@ -102,9 +102,11 @@
             }
         };
 
-        window.addEventListener('popstate', function () {
+        window.addEventListener('popstate', function() {
             if (paymentInProgress && confirm("Cancel payment?")) {
-                axios.post('{{ route('payment.cancel') }}', { message: 'Payment cancelled' })
+                axios.post('{{ route('payment.cancel') }}', {
+                        message: 'Payment cancelled'
+                    })
                     .then(() => alert('Payment cancelled.'))
                     .catch(() => alert('Error cancelling payment.'));
                 paymentInProgress = false;
@@ -115,6 +117,12 @@
 
         // Initialize pushState to track the page
         history.pushState(null, null, window.location.href)
+        if ("{{ session('success') }}") {
+            alert("Payment Successful");
+        } else if ("{{ session('error') }}") {
+            console.log("Payment Failed");
+            alert("Payment Failed");
+        }
     </script>
 </body>
 
