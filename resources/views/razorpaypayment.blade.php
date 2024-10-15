@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +10,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
+
 <body>
     <div style="width: 100%; max-width: 400px; margin: 50px auto;">
         <h2>BindassPAY</h2>
@@ -32,7 +34,7 @@
     </div>
 
     <script>
-        document.getElementById('payment-form').addEventListener('submit', async function (e) {
+        document.getElementById('payment-form').addEventListener('submit', async function(e) {
             e.preventDefault();
 
             const name = document.getElementById('name').value;
@@ -47,7 +49,11 @@
                     amount: amount,
                 });
 
-                const { order_id, key, amount: razorpayAmount } = response.data;
+                const {
+                    order_id,
+                    key,
+                    amount: razorpayAmount
+                } = response.data;
 
                 // Launch Razorpay checkout
                 const options = {
@@ -57,7 +63,7 @@
                     name: "BindassPAY",
                     description: "Test Transaction",
                     order_id: order_id,
-                    handler: async function (response) {
+                    handler: async function(response) {
                         const verifyResponse = await axios.post('{{ route('payment.verify') }}', {
                             razorpay_order_id: response.razorpay_order_id,
                             razorpay_payment_id: response.razorpay_payment_id,
@@ -79,7 +85,7 @@
                 const rzp = new Razorpay(options);
                 rzp.open();
 
-                rzp.on('payment.failed', function (response) {
+                rzp.on('payment.failed', function(response) {
                     alert('Payment Failed: ' + response.error.description);
                 });
             } catch (error) {
@@ -87,6 +93,29 @@
                 alert('Failed to create Razorpay order.');
             }
         });
+
+        window.onbeforeunload = function(e) {
+            if (paymentInProgress) {
+                const message = "A payment is in progress. Do you really want to cancel it?";
+                e.returnValue = message; // Some browsers require this for compatibility
+                return message;
+            }
+        };
+
+        window.addEventListener('popstate', function () {
+            if (paymentInProgress && confirm("Cancel payment?")) {
+                axios.post('{{ route('payment.cancel') }}', { message: 'Payment cancelled' })
+                    .then(() => alert('Payment cancelled.'))
+                    .catch(() => alert('Error cancelling payment.'));
+                paymentInProgress = false;
+            } else {
+                history.pushState(null, null, window.location.href);
+            }
+        });
+
+        // Initialize pushState to track the page
+        history.pushState(null, null, window.location.href)
     </script>
 </body>
+
 </html>

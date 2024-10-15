@@ -60,7 +60,7 @@ class PaymentgatewayController extends Controller
         }
 
         try {
-            $attributes = $request->only('razorpay_order_id', 'razorpay_payment_id', 'razorpay_signature');
+            $attributes = $request->only('razorpay_order_id', 'razorpay_payment_id');
             $this->api->utility->verifyPaymentSignature($attributes);
 
             return redirect('/')->with('success', 'Payment successful!');
