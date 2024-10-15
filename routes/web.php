@@ -17,9 +17,10 @@ use App\Http\Controllers\PaymentgatewayController;
 // Route::post('webhook/razorpay', [PaymentgatewayController::class, 'handleWebhook']);
 
 
-Route::get('/razorpay-payment', function () {
+Route::get('/', function () {
     return view('razorpaypayment');
 });
 Route::post('/payment/create', [PaymentgatewayController::class, 'createOrder'])->name('payment.create');
 Route::post('/payment/verify', [PaymentgatewayController::class, 'verify'])->name('payment.verify');
 Route::post('/payment/cancel', [PaymentgatewayController::class, 'cancelOrder'])->name('payment.cancel');
+Route::post('/webhook/razorpay', [PaymentgatewayController::class, 'handleWebhook'])->name('payment.webhook');

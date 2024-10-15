@@ -54,7 +54,7 @@
                     key: key,
                     amount: razorpayAmount,
                     currency: "INR",
-                    name: "Payment Demo",
+                    name: "BindassPAY",
                     description: "Test Transaction",
                     order_id: order_id,
                     handler: async function (response) {

@@ -10,6 +10,7 @@ use App\Models\Order;
 use App\Http\Requests\CreateOrderRequest;
 use App\Http\Requests\OrderCancelRequest;
 use Log;
+use DB;
 class PaymentgatewayController extends Controller
 {
     public function createOrder(CreateOrderRequest $request)
@@ -31,7 +32,7 @@ class PaymentgatewayController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'amount' => $request->amount,  // Amount in rupees
-            'order_id' => $razorpayOrder['id'], 
+            'order_id' => $razorpayOrder['id'],
             'status' => 'pending',
         ]);
 
@@ -41,6 +42,7 @@ class PaymentgatewayController extends Controller
             'email' => $request->email,
             'amount' => $request->amount,
             'status' => 'pending',
+            // Log::info('Expected Signature: ' . $expectedSignature),
             // 'payment_id' => $razorpayOrder['id'],
         ]);
     }
@@ -92,6 +94,7 @@ class PaymentgatewayController extends Controller
         $actualSignature = $request->header('X-Razorpay-Signature');
 
         if (!$this->verifyWebhookSignature($payload, $actualSignature, $webhookSecret)) {
+            Log::error('Signature verification failed');
             return response()->json(['error' => 'Invalid signature'], 400);
         }
 
@@ -103,44 +106,69 @@ class PaymentgatewayController extends Controller
 
         $event = $data['event'] ?? null;
 
+        $payment = $data['payload']['payment']['entity'] ?? null;
+
+        // Handle event types
         switch ($event) {
             case 'payment.captured':
-                $this->handlePaymentCaptured($data['payload']['payment']['entity']);
+                $this->processPayment($payment, 'captured');
                 break;
 
             case 'payment.failed':
-                $this->handlePaymentFailed($data['payload']['payment']['entity']);
+                $this->processPayment($payment, 'failed');
                 break;
 
             default:
+                Log::warning('Unhandled event type: ' . $event);
                 return response()->json(['error' => 'Unhandled event type'], 400);
         }
 
         return response()->json(['status' => 'success'], 200);
     }
 
-    private function handlePaymentCaptured($payment)
+    private function processPayment(array $payment, string $status): void
     {
-        $orderId = $payment['order_id'] ?? null;
-        $amount = $payment['amount'] ?? null;
-        Log::info("Payment captured successfully for Order {$orderId} with amount {$amount}.");
+        $orderId = $payment['order_id'] ?? 'N/A';
+        $amount = $payment['amount'] ?? 0;
+
+        if ($status === 'captured') {
+            $this->markOrderAsPaid($orderId, $amount);
+            Log::info("Payment captured for Order ID: {$orderId}, Amount: {$amount}");
+        } else {
+            $this->markOrderAsFailed($orderId, $amount);
+            Log::error("Payment failed for Order ID: {$orderId}, Amount: {$amount}");
+        }
     }
 
-    private function handlePaymentFailed($payment)
+    // // Dummy methods for marking order as paid/failed
+    private function markOrderAsPaid(string $orderId, int $amount): void
     {
-        $orderId = $payment['order_id'] ?? null;
-        $amount = $payment['amount'] ?? null;
-        Log::error("Payment failed for Order {$orderId} with amount {$amount}.");
+        DB::table('orders')->where('order_id', $orderId)->update([
+            'status' => 'success',
+            'amount' => $amount,
+            'updated_at' => now()
+        ]);
+        // Logic to mark the order as paid
+        Log::info("Order {$orderId} marked as paid with amount {$amount}.");
+    }
+
+    private function markOrderAsFailed(string $orderId, int $amount): void
+    {
+        DB::table('orders')->where('order_id', $orderId)->update([
+            'status' => 'failed',
+            'amount' => $amount,
+            'updated_at' => now()
+        ]);
+        // Logic to mark the order as failed
+        Log::error("Order {$orderId} marked as failed.");
 
     }
 
     private function verifyWebhookSignature($payload, $actualSignature, $secret)
     {
         $expectedSignature = hash_hmac('sha256', $payload, $secret);
-
+        Log::info('Expected Signature: ' . $expectedSignature);
         return hash_equals($expectedSignature, $actualSignature);
-
-
     }
 
 
