@@ -19,6 +19,6 @@ Route::post('payment/verify', [PaymentgatewayController::class, 'verify']);
 // });
 Route::get('webhook/razorpay/', function () {
     return response()->json([
-        'message' => 'No Reaponse',
+        'message' => 'No Response',
     ]);
 });
