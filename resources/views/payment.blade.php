@@ -33,7 +33,7 @@
     </div>
 
     <script>
-        let paymentInProgress = false; // Flag to track payment state
+        let paymentInProgress = false; 
 
         document.getElementById('payment-form').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -43,7 +43,7 @@
             const amount = document.getElementById('amount').value;
 
             try {
-                // Create the Razorpay order
+
                 const response = await axios.post('{{ route('payment.create') }}', {
                     name: name,
                     email: email,
@@ -56,7 +56,7 @@
                     amount: razorpayAmount
                 } = response.data;
 
-                // Navigate to order confirmation page
+
                 window.location.href = "{{ route('payment.confirm') }}?name=" + name + "&amount=" + amount +
                     "&order_id=" + order_id;
 
@@ -69,7 +69,7 @@
         window.onbeforeunload = function(e) {
             if (paymentInProgress) {
                 const message = "A payment is in progress. Do you really want to cancel it?";
-                e.returnValue = message; // Some browsers require this for compatibility
+                e.returnValue = message; 
                 return message;
             }
         };

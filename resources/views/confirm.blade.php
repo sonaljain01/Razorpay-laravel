@@ -158,12 +158,12 @@
 
     #cancel-order {
         background-color: #f44336;
-        /* Red for Cancel button */
+
     }
 
     #cancel-order:hover {
         background-color: #d32f2f;
-        /* Darker red on hover */
+
     }
 </style>
 
