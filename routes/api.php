@@ -22,3 +22,5 @@ Route::get('webhook/razorpay/', function () {
         'message' => 'No Response',
     ]);
 });
+
+Route::post('/payment/failed', [PaymentgatewayController::class, 'paymentFailed']);

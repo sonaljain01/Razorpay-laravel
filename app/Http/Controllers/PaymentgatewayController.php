@@ -21,30 +21,36 @@ class PaymentgatewayController extends Controller
         $api = new Api(env('RAZORPAY_KEY'), env('RAZORPAY_SECRET'));
 
         // Create a Razorpay order
-        $razorpayOrder = $api->order->create([
-            'receipt' => 'order_rcptid_' . time(),
-            'amount' => $request->amount * 100, // Amount in paise
-            'currency' => 'INR',
-        ]);
+        try {
+            $razorpayOrder = $api->order->create([
+                'receipt' => 'order_rcptid_' . time(),
+                'amount' => $request->amount * 100, // Amount in paise
+                'currency' => 'INR',
+            ]);
 
-        // Save order to DB
-        $order = Order::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'amount' => $request->amount,  // Amount in rupees
-            'order_id' => $razorpayOrder['id'],
-            'status' => 'pending',
-        ]);
+            // Save order to DB
+            $order = Order::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'amount' => $request->amount,  // Amount in rupees
+                'order_id' => $razorpayOrder['id'],
+                'status' => 'pending',
+            ]);
+            // return view('order-confirm', $order);
+            return response()->json([
+                'order_id' => $razorpayOrder['id'],
+                'name' => $request->name,
+                'email' => $request->email,
+                'amount' => $request->amount,
+                'status' => 'pending',
+                // Log::info('Expected Signature: ' . $expectedSignature),
+                // 'payment_id' => $razorpayOrder['id'],
+            ], 200);
 
-        return response()->json([
-            'order_id' => $razorpayOrder['id'],
-            'name' => $request->name,
-            'email' => $request->email,
-            'amount' => $request->amount,
-            'status' => 'pending',
-            // Log::info('Expected Signature: ' . $expectedSignature),
-            // 'payment_id' => $razorpayOrder['id'],
-        ]);
+        } catch (\Exception $e) {
+            Log::error('Razorpay Order Creation Error: ' . $e->getMessage()); // Log error message
+            return response()->json(['error' => 'Failed to create order: ' . $e->getMessage()], 500); // Return error response
+        }
     }
 
     private $api;
@@ -55,10 +61,10 @@ class PaymentgatewayController extends Controller
     }
     public function verify(Request $request)
     {
-        if (empty($request->razorpay_payment_id)) {
-            return redirect('/')->with('error', 'Payment Failed!');
-        }
+        $input = $request->all();
 
+        // Create an instance of the Razorpay API
+        $api = new Api(env('RAZORPAY_KEY'), env('RAZORPAY_SECRET'));
         try {
             // $attributes = $request->only('razorpay_order_id', 'razorpay_payment_id', 'razorpay_signature');
             $attributes = [
@@ -68,7 +74,8 @@ class PaymentgatewayController extends Controller
             ];
             $this->api->utility->verifyPaymentSignature($attributes);
 
-            return back()->with('success', 'Payment successful!');
+            // return back()->with('success', 'Payment successful!');
+            return response()->json(['success' => true]);
         } catch (SignatureVerificationError $e) {
             Log::error('Razorpay Signature Verification Failed: ' . $e->getMessage());
             return back()->with('error', 'Razorpay Error: ' . $e->getMessage());
@@ -176,5 +183,32 @@ class PaymentgatewayController extends Controller
         return hash_equals($expectedSignature, $actualSignature);
     }
 
+    public function initPayment(Request $request)
+    {
+        $orderId = $request->input('order_id'); // Get the order ID from the request
+
+        $key = env('RAZORPAY_KEY');
+        //actual amount from database
+        $amount = $request->input('amount');
+
+        return response()->json([
+            'key' => $key,
+            'razorpayAmount' => $amount,
+        ]);
+    }
+
+    public function paymentFailed(Request $request)
+    {
+        $orderId = $request->input('order_id');
+
+        $order = Order::where('order_id', $orderId)->first();
+
+        if (!$order) {
+            return response()->json(['error' => 'Order not found'], 404);
+        }
+        $order->update(['status' => 'failed']);
+
+        return response()->json(['message' => 'Order marked as failed.'], 200);
+    }
 
 }
