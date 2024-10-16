@@ -11,9 +11,9 @@ Route::get('/user', function (Request $request) {
 
 Route::group(['prefix' => 'user'], function () {
     // Route::group(['middleware' => 'auth:api'], function () {
-        Route::post('sonal/Razorpay-laravel/public/payment/create-order', [PaymentgatewayController::class, 'createOrder']);
-        Route::post('sonal/Razorpay-laravel/public/payment/cancel', [PaymentgatewayController::class, 'cancelOrder']);
-        Route::post('sonal/Razorpay-laravel/public/webhook/razorpay', [PaymentgatewayController::class, 'handleWebhook']);
-        Route::post('sonal/Razorpay-laravel/public/payment/verify', [PaymentgatewayController::class, 'verify']);
+        Route::post('payment/create-order', [PaymentgatewayController::class, 'createOrder']);
+        Route::post('payment/cancel', [PaymentgatewayController::class, 'cancelOrder']);
+        Route::post('webhook/razorpay', [PaymentgatewayController::class, 'handleWebhook']);
+        Route::post('payment/verify', [PaymentgatewayController::class, 'verify']);
     });
 // });
