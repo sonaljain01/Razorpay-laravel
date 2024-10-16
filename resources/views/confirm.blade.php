@@ -13,6 +13,7 @@
         <p>Name: {{ request('name') }}</p>
         <p>Amount: ₹{{ request('amount') }}</p>
         <button id="pay-now">Pay Now</button>
+        <button id="cancel-order" style="margin-top: 10px;">Cancel Order</button> <!-- Cancel Order Button -->
     </div>
 
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
@@ -20,6 +21,7 @@
 
     <script>
         let paymentInProgress = false;
+
         document.getElementById('pay-now').addEventListener('click', async function() {
             paymentInProgress = true;
             const orderId = new URLSearchParams(window.location.search).get('order_id');
@@ -66,41 +68,39 @@
                 alert('Failed to initiate payment. Please try again.');
             }
         });
+
+        document.getElementById('cancel-order').addEventListener('click', async function() {
+            if (confirm("Are you sure you want to cancel the order?")) {
+                try {
+                    const orderId = new URLSearchParams(window.location.search).get('order_id');
+                    const response = await axios.post('{{ route('payment.cancel') }}', {
+                        order_id: orderId,
+                        message: 'Order cancelled by user'
+                    });
+
+                    if (response.status === 200) {
+                        
+                        window.location.href = "{{ route('payment.cancel.success') }}"; // Redirect to home page
+                    }
+                } catch (error) {
+                    console.error('Error cancelling order:', error);
+                    alert('Failed to cancel the order. Please try again.');
+                }
+            }
+        });
+
         window.onbeforeunload = function(e) {
             if (paymentInProgress) {
                 const message = "A payment is in progress. Do you really want to cancel it?";
-                e.returnValue = message; // Some browsers require this for compatibility
+                e.returnValue = message; 
                 return message;
             }
         };
 
-        // Handle the back navigation
-        window.addEventListener('popstate', function() {
-            if (paymentInProgress && confirm("Do you want to cancel the order?")) {
-                // Call the cancellation route
-                axios.post('{{ route('payment.cancel') }}', {
-                        message: 'Order cancelled by user'
-                    })
-                    .then(response => {
-                        alert('Order has been cancelled.');
-                        window.location.href = "{{ route('home') }}"; // Redirect to home after cancellation
-                    })
-                    .catch(error => {
-                        console.error('Error cancelling order:', error);
-                        alert('Failed to cancel the order. Please try again.');
-                    });
-            } else {
-                // Stay on the same page
-                history.pushState(null, null, window.location.href);
-            }
-        });
-
-        // Initialize pushState to track the page
-        history.pushState(null, null, window.location.href);
     </script>
 </body>
-<style>
 
+<style>
     * {
         margin: 0;
         padding: 0;
@@ -156,6 +156,15 @@
         background-color: #45a049;
     }
 
+    #cancel-order {
+        background-color: #f44336;
+        /* Red for Cancel button */
+    }
+
+    #cancel-order:hover {
+        background-color: #d32f2f;
+        /* Darker red on hover */
+    }
 </style>
 
 </html>

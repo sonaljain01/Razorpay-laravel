@@ -10,7 +10,7 @@ Route::get('/', function () {
 })->name('home');
 Route::post('payment/create', [PaymentgatewayController::class, 'createOrder'])->name('payment.create');
 Route::post('payment/verify', [PaymentgatewayController::class, 'verify'])->name('payment.verify');
-Route::post('payment/cancel', [PaymentgatewayController::class, 'cancelOrder'])->name('payment.cancel');
+
 Route::post('webhook/razorpay', [PaymentgatewayController::class, 'handleWebhook'])->name('payment.webhook');
 Route::get('payment/success', function () {
     return view('success');
@@ -24,3 +24,7 @@ Route::get('/payment/confirm', function() {
 Route::post('/payment/init', [PaymentgatewayController::class, 'initPayment'])->name('payment.init');
 
 Route::post('/payment/failed', [PaymentgatewayController::class, 'paymentFailed'])->name('payment.failed');
+Route::post('/payment/cancel', [PaymentgatewayController::class, 'cancelOrder'])->name('payment.cancel');
+Route::get('/payment/cancel/success', function () {
+    return view('cancel');
+})->name('payment.cancel.success');
