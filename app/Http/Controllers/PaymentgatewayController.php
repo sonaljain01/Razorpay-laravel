@@ -104,7 +104,14 @@ class PaymentgatewayController extends Controller
         $payload = $request->getContent();
         $webhookSecret = env('RAZORPAY_WEBHOOK_SECRET');
         $actualSignature = $request->header('X-Razorpay-Signature');
+        $paymentStatus = $payload['event'] === 'payment.captured' ? 'success' : 'failed';
 
+        Order::where('order_id', $payload['payload']['payment']['entity']['order_id'])
+            ->update([
+                'payment_status' => $paymentStatus,
+                'razorpay_payment_id' => $payload['payload']['payment']['entity']['id'],
+                'amount' => $payload['payload']['payment']['entity']['amount'] / 100,
+            ]);
         if (!$this->verifyWebhookSignature($payload, $actualSignature, $webhookSecret)) {
             Log::error('Signature verification failed');
             return response()->json(['error' => 'Invalid signature'], 400);
@@ -209,6 +216,17 @@ class PaymentgatewayController extends Controller
         $order->update(['status' => 'failed']);
 
         return response()->json(['message' => 'Order marked as failed.'], 200);
+    }
+    // In OrderController.php
+    public function showOrderConfirmation($orderId)
+    {
+        $order = Order::where('order_id', $orderId)->first();
+
+        if (!$order) {
+            return redirect('/')->with('error', 'Order not found.');
+        }
+
+        return view('order.confirmation', compact('order'));
     }
 
 }

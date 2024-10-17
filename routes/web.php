@@ -28,3 +28,5 @@ Route::post('/payment/cancel', [PaymentgatewayController::class, 'cancelOrder'])
 Route::get('/payment/cancel/success', function () {
     return view('cancel');
 })->name('payment.cancel.success');
+// In web.php (routes)
+Route::get('order/confirmation/{orderId}', [PaymentgatewayController::class, 'showOrderConfirmation']);
